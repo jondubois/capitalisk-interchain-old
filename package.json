@@ -1,0 +1,25 @@
+{
+  "name": "lisk-interchain-selector",
+  "version": "1.0.0",
+  "description": "Custom peer selector plugin for Lisk interchain.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/jondubois/lisk-interchain-selector.git"
+  },
+  "keywords": [
+    "lisk",
+    "interchain",
+    "peer",
+    "selector"
+  ],
+  "author": "Jonathan Gros-Dubois",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/jondubois/lisk-interchain-selector/issues"
+  },
+  "homepage": "https://github.com/jondubois/lisk-interchain-selector#readme"
+}
