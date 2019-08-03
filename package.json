@@ -21,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/jondubois/lisk-interchain/issues"
   },
-  "homepage": "https://github.com/jondubois/lisk-interchain#readme"
+  "homepage": "https://github.com/jondubois/lisk-interchain#readme",
+  "dependencies": {
+    "lodash.shuffle": "^4.2.0"
+  }
 }
