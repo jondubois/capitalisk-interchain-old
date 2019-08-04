@@ -1,2 +1,2 @@
 # lisk-interchain
-Custom peer selector plugin for Lisk interchain.
+Custom peer matching plugin for Lisk interchain.
