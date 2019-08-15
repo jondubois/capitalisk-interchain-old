@@ -2,12 +2,32 @@ const shuffle = require('lodash.shuffle');
 
 let defaultSelectForRequestFunction;
 let defaultSelectForSendFunction;
+let defaultSelectForConnectionFunction;
 
 function getAffectedModule(remoteActionName) {
   if (remoteActionName.indexOf(':') === -1) {
     return null;
   }
   return remoteActionName.split(':')[0];
+}
+
+function interchainSelectForConnection(input) {
+  if (!defaultSelectForConnectionFunction) {
+    return [];
+  }
+  let knownPeers = [...input.newPeers, ...input.triedPeers];
+  let {nodeInfo} = input;
+  let nodeModules = Object.keys(nodeInfo.modules || {}).sort().join(',');
+
+  let matchingPeer = knownPeers.find((peerInfo) => {
+    let peerModules = Object.keys(peerInfo.modules || {}).sort().join(',');
+    return peerModules === nodeModules;
+  });
+  let selectedPeers = defaultSelectForConnectionFunction(input);
+  if (selectedPeers.length > 1) {
+    selectedPeers[0] = matchingPeer;
+  }
+  return selectedPeers;
 }
 
 function interchainSelectForRequest(input) {
@@ -25,6 +45,10 @@ function interchainSelectForRequest(input) {
     return [chosenPeer];
   }
 
+  if (!defaultSelectForRequestFunction) {
+    return [];
+  }
+
   return defaultSelectForRequestFunction(input);
 }
 
@@ -40,6 +64,10 @@ function interchainSelectForSend(input) {
       return [];
     }
     return shuffle(matchingPeers).slice(0, input.peerLimit);
+  }
+
+  if (!defaultSelectForSendFunction) {
+    return [];
   }
 
   return defaultSelectForSendFunction(input);
@@ -68,9 +96,11 @@ function attachInterchain(app) {
 
     defaultSelectForRequestFunction = this.network.p2p._peerPool._peerSelectForRequest;
     defaultSelectForSendFunction = this.network.p2p._peerPool._peerSelectForSend;
+    defaultSelectForConnectionFunction = this.network.p2p._peerPool._peerSelectForConnection;
 
     this.network.p2p._peerPool._peerSelectForRequest = interchainSelectForRequest;
     this.network.p2p._peerPool._peerSelectForSend = interchainSelectForSend;
+    this.network.p2p._peerPool._peerSelectForConnection = interchainSelectForConnection;
   };
 }
 
