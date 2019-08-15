@@ -16,7 +16,7 @@ function interchainSelectForConnection(input) {
     return [];
   }
   let knownPeers = [...input.newPeers, ...input.triedPeers];
-  let {nodeInfo} = input;
+  let nodeInfo = input.nodeInfo || {};
   let nodeModules = Object.keys(nodeInfo.modules || {}).sort().join(',');
 
   let matchingPeer = knownPeers.find((peerInfo) => {
