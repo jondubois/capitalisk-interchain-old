@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/jondubois/lisk-interchain#readme",
   "dependencies": {
+    "lisk-framework": "^0.4.0-alpha.0",
     "lodash.shuffle": "^4.2.0"
   }
 }

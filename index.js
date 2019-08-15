@@ -1,4 +1,5 @@
 const shuffle = require('lodash.shuffle');
+const { InMemoryChannel } = require('lisk-framework/src/controller/channels');
 
 let defaultSelectForRequestFunction;
 let defaultSelectForSendFunction;
@@ -81,23 +82,42 @@ function interchainSelectForSend(input) {
   return defaultSelectForSendFunction(input);
 }
 
+let interchainState = {};
+
+let interchainChannel = new InMemoryChannel(
+	'interchain',
+	[],
+	{
+		getComponentConfig: {
+			handler: (action) => this.config.components[action.params],
+		},
+		getModuleState: {
+			handler: (action) => interchainState[action.params.moduleName],
+		},
+		updateModuleState: {
+			handler: (action) => {
+        interchainState = {
+          ...interchainState,
+          ...action.params
+        };
+      },
+		},
+	},
+	{ skipInternalEvents: true },
+);
+
 function attachInterchain(app) {
   let realLoadFunction = app.getModule('network').prototype.load;
 
   app.getModule('network').prototype.load = async function (channel) {
+    interchainChannel.registerToBus(app.controller.bus);
     await realLoadFunction.call(this, channel);
-    let availableModules = Object.keys(app.getModules() || {}).reduce((modulesMap, moduleName) => {
-      return {
-        ...modulesMap,
-        [moduleName]: {}
-      };
-    }, {});
 
     let realApplyNodeInfoFunction = this.network.p2p.applyNodeInfo;
     this.network.p2p.applyNodeInfo = function (nodeInfo) {
       let extendedNodeInfo = {
         ...nodeInfo,
-        modules: availableModules
+        modules: interchainState
       };
       realApplyNodeInfoFunction.call(this, extendedNodeInfo);
     };
