@@ -24,7 +24,15 @@ function interchainSelectForConnection(input) {
     return peerModules === nodeModules;
   });
   let selectedPeers = defaultSelectForConnectionFunction(input);
-  if (selectedPeers.length > 1) {
+  if (matchingPeer && selectedPeers.length > 1) {
+    let matchingPeerId = `${matchingPeer.ipAddress}:${matchingPeer.wsPort}`;
+    let hasMatchingPeerId = selectedPeers.find((peerInfo) => {
+      let peerId = `${peerInfo.ipAddress}:${peerInfo.wsPort}`;
+      return peerId === matchingPeerId;
+    });
+    if (hasMatchingPeerId) {
+      return selectedPeers;
+    }
     selectedPeers[0] = matchingPeer;
   }
   return selectedPeers;
