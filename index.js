@@ -20,22 +20,31 @@ function interchainSelectForConnection(input) {
   let nodeInfo = input.nodeInfo || {};
   let nodeModules = Object.keys(nodeInfo.modules || {}).sort().join(',');
 
-  let matchingPeer = knownPeers.find((peerInfo) => {
-    let peerModules = Object.keys(peerInfo.modules || {}).sort().join(',');
-    return peerModules === nodeModules;
-  });
   let selectedPeers = defaultSelectForConnectionFunction(input);
-  if (matchingPeer && selectedPeers.length > 1) {
-    let matchingPeerId = `${matchingPeer.ipAddress}:${matchingPeer.wsPort}`;
-    let hasMatchingPeerId = selectedPeers.find((peerInfo) => {
-      let peerId = `${peerInfo.ipAddress}:${peerInfo.wsPort}`;
-      return peerId === matchingPeerId;
-    });
-    if (hasMatchingPeerId) {
-      return selectedPeers;
+  let selectedPeersLookup = {};
+  selectedPeers.forEach((peerInfo) => {
+    selectedPeersLookup[`${peerInfo.ipAddress}:${peerInfo.wsPort}`] = true;
+  });
+
+  let matchingPeers = knownPeers.filter((peerInfo) => {
+    let peerModules = Object.keys(peerInfo.modules || {}).sort().join(',');
+    return peerModules === nodeModules &&
+      !selectedPeersLookup[`${peerInfo.ipAddress}:${peerInfo.wsPort}`];
+  });
+  
+  // 50% chance to select a peer according to the default Lisk algorithm.
+  // 50% chance to select a peer based on matching modules.
+  selectedPeers = selectedPeers.map((defaultPeer) => {
+    if (Math.random() > .5) {
+      let lastMatchingPeer = matchingPeers.pop();
+      if (lastMatchingPeer) {
+        return lastMatchingPeer;
+      }
+      return defaultPeer;
     }
-    selectedPeers[0] = matchingPeer;
-  }
+    return defaultPeer;
+  });
+
   return selectedPeers;
 }
 
