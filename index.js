@@ -31,7 +31,22 @@ function interchainSelectForConnection(input) {
     return peerModules === nodeModules &&
       !selectedPeersLookup[`${peerInfo.ipAddress}:${peerInfo.wsPort}`];
   });
-  
+
+  let padPeersCount = selectedPeers.length - matchingPeers.length;
+
+  // Pad the matchingPeers list with unknown peers to increase the chance of discovery.
+  if (padPeersCount > 0) {
+    let untriedPeers = knownPeers.filter((peerInfo) => {
+      return !peerInfo.protocolVersion;
+    });
+    for (let i = 0; i < padPeersCount; i++) {
+      let lastUntriedPeer = untriedPeers.pop();
+      if (lastUntriedPeer) {
+        matchingPeers.push(lastUntriedPeer);
+      }
+    }
+  }
+
   // 50% chance to select a peer according to the default Lisk algorithm.
   // 50% chance to select a peer based on matching modules.
   selectedPeers = selectedPeers.map((defaultPeer) => {
