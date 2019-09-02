@@ -45,13 +45,15 @@ function interchainSelectForConnection(input) {
   // Pad the matchingPeers list with unknown peers to increase the chance of discovery.
   // This is useful for very small, newly created subnets.
   if (padPeersCount > 0) {
-    let untriedPeers = knownPeers.filter((peerInfo) => {
-      return !peerInfo.protocolVersion;
-    });
+    let untriedPeers = shuffle(knownPeers.filter((peerInfo) => !peerInfo.protocolVersion));
     for (let i = 0; i < padPeersCount; i++) {
       let lastUntriedPeer = untriedPeers.pop();
       if (lastUntriedPeer) {
-        matchingPeers.push(lastUntriedPeer);
+        let peerId = `${lastUntriedPeer.ipAddress}:${lastUntriedPeer.wsPort}`;
+        if (!chosenPeersLookup[peerId]) {
+          chosenPeersLookup[peerId] = true;
+          matchingPeers.push(lastUntriedPeer);
+        }
       }
     }
   }
