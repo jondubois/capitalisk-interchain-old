@@ -18,7 +18,8 @@ function interchainSelectForConnection(input) {
   }
   let knownPeers = [...input.newPeers, ...input.triedPeers];
   let nodeInfo = input.nodeInfo || {};
-  let nodeModules = Object.keys(nodeInfo.modules || {}).sort().join(',');
+  let nodeModulesList = Object.keys(nodeInfo.modules || {}).sort();
+  let nodeModules = nodeModulesList.join(',');
 
   let selectedPeers = defaultSelectForConnectionFunction(input);
   let selectedPeersLookup = {};
@@ -27,7 +28,10 @@ function interchainSelectForConnection(input) {
   });
 
   let matchingPeers = knownPeers.filter((peerInfo) => {
-    let peerModules = Object.keys(peerInfo.modules || {}).sort().join(',');
+    let peerModules = Object.keys(peerInfo.modules || {})
+      .sort()
+      .slice(0, nodeModulesList.length)
+      .join(',');
     return peerModules === nodeModules &&
       !selectedPeersLookup[`${peerInfo.ipAddress}:${peerInfo.wsPort}`];
   });
