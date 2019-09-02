@@ -18,27 +18,32 @@ function interchainSelectForConnection(input) {
   }
   let knownPeers = [...input.newPeers, ...input.triedPeers];
   let nodeInfo = input.nodeInfo || {};
-  let nodeModulesList = Object.keys(nodeInfo.modules || {}).sort();
-  let nodeModules = nodeModulesList.join(',');
+  let nodeModulesList = Object.keys(nodeInfo.modules || {});
 
   let selectedPeers = defaultSelectForConnectionFunction(input);
-  let selectedPeersLookup = {};
+
+  let chosenPeersLookup = {};
   selectedPeers.forEach((peerInfo) => {
-    selectedPeersLookup[`${peerInfo.ipAddress}:${peerInfo.wsPort}`] = true;
+    chosenPeersLookup[`${peerInfo.ipAddress}:${peerInfo.wsPort}`] = true;
   });
 
-  let matchingPeers = knownPeers.filter((peerInfo) => {
-    let peerModules = Object.keys(peerInfo.modules || {})
-      .sort()
-      .slice(0, nodeModulesList.length)
-      .join(',');
-    return peerModules === nodeModules &&
-      !selectedPeersLookup[`${peerInfo.ipAddress}:${peerInfo.wsPort}`];
+  let matchingPeers = [];
+
+  nodeModulesList.forEach((moduleName) => {
+    let matchingModulePeers = knownPeers.filter((peerInfo) => peerInfo.modules[moduleName]);
+    matchingModulePeers.forEach((peerInfo) => {
+      let peerId = `${peerInfo.ipAddress}:${peerInfo.wsPort}`;
+      if (!chosenPeersLookup[peerId]) {
+        chosenPeersLookup[peerId] = true;
+        matchingPeers.push(peerInfo);
+      }
+    });
   });
 
   let padPeersCount = selectedPeers.length - matchingPeers.length;
 
   // Pad the matchingPeers list with unknown peers to increase the chance of discovery.
+  // This is useful for very small, newly created subnets.
   if (padPeersCount > 0) {
     let untriedPeers = knownPeers.filter((peerInfo) => {
       return !peerInfo.protocolVersion;
@@ -51,10 +56,12 @@ function interchainSelectForConnection(input) {
     }
   }
 
-  // 50% chance to select a peer according to the default Lisk algorithm.
-  // 50% chance to select a peer based on matching modules.
+  matchingPeers = shuffle(matchingPeers);
+
+  let regularPeerSelectionProbability = 1 / (nodeModulesList.length + 1);
+
   selectedPeers = selectedPeers.map((defaultPeer) => {
-    if (Math.random() > .5) {
+    if (Math.random() > regularPeerSelectionProbability) {
       let lastMatchingPeer = matchingPeers.pop();
       if (lastMatchingPeer) {
         return lastMatchingPeer;
