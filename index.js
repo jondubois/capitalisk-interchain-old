@@ -40,7 +40,11 @@ function interchainSelectForConnection(input) {
     });
   });
 
+  matchingPeers = shuffle(matchingPeers);
+
   let padPeersCount = selectedPeers.length - matchingPeers.length;
+
+  let paddingPeers = [];
 
   // Pad the matchingPeers list with unknown peers to increase the chance of discovery.
   // This is useful for very small, newly created subnets.
@@ -52,13 +56,13 @@ function interchainSelectForConnection(input) {
         let peerId = `${lastUntriedPeer.ipAddress}:${lastUntriedPeer.wsPort}`;
         if (!chosenPeersLookup[peerId]) {
           chosenPeersLookup[peerId] = true;
-          matchingPeers.push(lastUntriedPeer);
+          paddingPeers.push(lastUntriedPeer);
         }
       }
     }
   }
 
-  matchingPeers = shuffle(matchingPeers);
+  matchingPeers = paddingPeers.concat(matchingPeers);
 
   let regularPeerSelectionProbability = 1 / (nodeModulesList.length + 1);
 
