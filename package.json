@@ -1,6 +1,6 @@
 {
   "name": "lisk-interchain",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "Custom peer selector plugin for Lisk interchain.",
   "main": "index.js",
   "scripts": {
