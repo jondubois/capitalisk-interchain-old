@@ -1,6 +1,6 @@
 {
   "name": "lisk-interchain",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Custom peer selector plugin for Lisk interchain.",
   "main": "index.js",
   "scripts": {
@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/jondubois/lisk-interchain#readme",
   "dependencies": {
-    "lisk-framework": "^0.4.0-alpha.0",
+    "lisk-framework": "^0.4.4",
     "lodash.shuffle": "^4.2.0"
   }
 }
