@@ -33,7 +33,7 @@ function interchainSelectForConnection(input) {
   let matchingPeers = [];
 
   nodeModulesList.forEach((moduleName) => {
-    let matchingModulePeers = knownPeers.filter((peerInfo) => peerInfo.modules[moduleName]);
+    let matchingModulePeers = knownPeers.filter((peerInfo) => peerInfo.modules && peerInfo.modules[moduleName]);
     matchingModulePeers.forEach((peerInfo) => {
       let peerId = `${peerInfo.ipAddress}:${peerInfo.wsPort}`;
       if (!chosenPeersLookup[peerId]) {
