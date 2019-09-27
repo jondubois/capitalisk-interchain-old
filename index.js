@@ -5,11 +5,33 @@ let defaultSelectForRequestFunction;
 let defaultSelectForSendFunction;
 let defaultSelectForConnectionFunction;
 
-function getAffectedModule(remoteActionName) {
+function parseAction(remoteActionName) {
   if (remoteActionName.indexOf(':') === -1) {
     return null;
   }
-  return remoteActionName.split(':')[0];
+  let remoteActionParts = remoteActionName.split(':');
+  let routeString = remoteActionParts[0];
+
+  let targetModule;
+  let requiredModules;
+  let sanitizedAction;
+
+  if (routeString.indexOf('&') === -1) {
+    targetModule = routeString;
+    requiredModules = [];
+    sanitizedAction = remoteActionName;
+  } else {
+    let routeStringParts = routeString.split('&');
+    targetModule = routeStringParts[0];
+    requiredModules = routeStringParts[1].split(',');
+    sanitizedAction = `${targetModule}:${remoteActionParts[1]}`;
+  }
+
+  return {
+    targetModule,
+    requiredModules,
+    sanitizedAction
+  };
 }
 
 function interchainSelectForConnection(input) {
@@ -84,43 +106,52 @@ function interchainSelectForConnection(input) {
 }
 
 function interchainSelectForRequest(input) {
+  if (!defaultSelectForRequestFunction) {
+    return [];
+  }
   let {nodeInfo, peers, peerLimit, requestPacket} = input;
 
-  let procedureTargetModule = getAffectedModule(requestPacket.procedure);
-  if (procedureTargetModule) {
+  let {targetModule, requiredModules, sanitizedAction} = parseAction(requestPacket.procedure);
+  requestPacket.procedure = sanitizedAction;
+
+  if (targetModule) {
     let matchingPeers = peers.filter((peerInfo) => {
-      return peerInfo.modules && peerInfo.modules[procedureTargetModule];
+      return peerInfo.modules && peerInfo.modules[targetModule] &&
+        requiredModules.every((requiredModule) => peerInfo.modules[requiredModule]);
     });
     if (!matchingPeers.length) {
       return [];
     }
-    let chosenPeer = matchingPeers[Math.floor(Math.random() * matchingPeers.length)];
-    return [chosenPeer];
-  }
-
-  if (!defaultSelectForRequestFunction) {
-    return [];
+    return defaultSelectForRequestFunction({
+      ...input,
+      peers: matchingPeers
+    });
   }
 
   return defaultSelectForRequestFunction(input);
 }
 
 function interchainSelectForSend(input) {
+  if (!defaultSelectForSendFunction) {
+    return [];
+  }
   let {nodeInfo, peers, peerLimit, messagePacket} = input;
 
-  let eventSourceModule = getAffectedModule(messagePacket.event);
-  if (eventSourceModule) {
+  let {targetModule, requiredModules, sanitizedAction} = parseAction(messagePacket.event);
+  messagePacket.event = sanitizedAction;
+
+  if (targetModule) {
     let matchingPeers = peers.filter((peerInfo) => {
-      return peerInfo.modules && peerInfo.modules[eventSourceModule];
+      return peerInfo.modules && peerInfo.modules[targetModule] &&
+        requiredModules.every((requiredModule) => peerInfo.modules[requiredModule]);
     });
     if (!matchingPeers.length) {
       return [];
     }
-    return shuffle(matchingPeers).slice(0, input.peerLimit);
-  }
-
-  if (!defaultSelectForSendFunction) {
-    return [];
+    return defaultSelectForSendFunction({
+      ...input,
+      peers: matchingPeers
+    });
   }
 
   return defaultSelectForSendFunction(input);
