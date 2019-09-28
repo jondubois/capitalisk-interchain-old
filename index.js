@@ -7,7 +7,11 @@ let defaultSelectForConnectionFunction;
 
 function parseAction(remoteActionName) {
   if (remoteActionName.indexOf(':') === -1) {
-    return null;
+    return {
+      targetModule: undefined,
+      requiredModules: [],
+      sanitizedAction: remoteActionName
+    };
   }
   let remoteActionParts = remoteActionName.split(':');
   let routeString = remoteActionParts[0];
