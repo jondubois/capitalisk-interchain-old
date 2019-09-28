@@ -16,12 +16,12 @@ function parseAction(remoteActionName) {
   let requiredModules;
   let sanitizedAction;
 
-  if (routeString.indexOf('&') === -1) {
+  if (routeString.indexOf('+') === -1) {
     targetModule = routeString;
     requiredModules = [];
     sanitizedAction = remoteActionName;
   } else {
-    let routeStringParts = routeString.split('&');
+    let routeStringParts = routeString.split('+');
     targetModule = routeStringParts[0];
     requiredModules = routeStringParts[1].split(',');
     sanitizedAction = `${targetModule}:${remoteActionParts[1]}`;
