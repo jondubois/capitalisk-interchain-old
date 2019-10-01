@@ -17,7 +17,7 @@
     "selector"
   ],
   "author": "Jonathan Gros-Dubois",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/jondubois/lisk-interchain/issues"
   },
