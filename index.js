@@ -1,41 +1,89 @@
 const shuffle = require('lodash.shuffle');
 const { InMemoryChannel } = require('lisk-framework/src/controller/channels');
+const url = require('url');
 
 let defaultSelectForRequestFunction;
 let defaultSelectForSendFunction;
 let defaultSelectForConnectionFunction;
 
+function removeQueryString(string) {
+  return string.replace(/\?.*$/, '');
+}
+
 function parseAction(remoteActionName) {
   if (remoteActionName.indexOf(':') === -1) {
     return {
-      targetModule: undefined,
-      requiredModules: [],
       sanitizedAction: remoteActionName
     };
   }
   let remoteActionParts = remoteActionName.split(':');
   let routeString = remoteActionParts[0];
 
-  let targetModule;
-  let requiredModules;
-  let sanitizedAction;
-
-  if (routeString.indexOf(',') === -1) {
-    targetModule = routeString;
-    requiredModules = [];
-    sanitizedAction = remoteActionName;
-  } else {
-    let routeStringParts = routeString.split(',');
-    targetModule = routeStringParts[0];
-    requiredModules = routeStringParts.slice(1);
-    sanitizedAction = `${targetModule}:${remoteActionParts[1]}`;
-  }
+  let routeStringParts = routeString.split(',');
+  let targetModule = removeQueryString(routeStringParts[0]);
+  let sanitizedAction = `${targetModule}:${remoteActionParts[1]}`;
 
   return {
-    targetModule,
-    requiredModules,
+    routeString,
     sanitizedAction
   };
+}
+
+function getPeerModuleMatchScore(nodeInfo, peerInfo, moduleName) {
+  let nodeModules = nodeInfo.modules;
+  let peerModules = peerInfo.modules;
+  if (!nodeModules) {
+    return 0;
+  }
+  if (!peerModules) {
+    return 0;
+  }
+
+  let nodeModuleData = nodeModules[moduleName];
+  let peerModuleData = peerModules[moduleName];
+  if (!nodeModuleData) {
+    return 0;
+  }
+  if (!peerModuleData) {
+    return 0;
+  }
+
+  return Object.keys(nodeModuleData).reduce((score, field) => {
+    if (nodeModuleData[field] === peerModuleData[field]) {
+      return score + 1;
+    }
+    return score;
+  }, 0);
+}
+
+function doesPeerMatchRoute(peerInfo, routeString) {
+  if (!routeString) {
+    return true;
+  }
+  if (!peerInfo.modules) {
+    return false;
+  }
+  let routeStringParts = routeString.split(',');
+  for (let requirementString of routeStringParts) {
+    let requirementParts;
+    try {
+      requirementParts = url.parse(requirementString, true);
+    } catch (error) {
+      return false;
+    }
+    let {pathname, query} = requirementParts;
+    let moduleData = peerInfo.modules[pathname];
+    if (!moduleData) {
+      return false;
+    }
+    let peerHasAllRequiredModuleFields = Object.keys(query).every(
+      (field) => moduleData[field] === query[field]
+    );
+    if (!peerHasAllRequiredModuleFields) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function interchainSelectForConnection(input) {
@@ -57,9 +105,23 @@ function interchainSelectForConnection(input) {
   });
 
   let matchingPeers = [];
+  let maxPeersToAllocatePerModule = Math.ceil(input.peerLimit / nodeModulesList.length);
 
   nodeModulesList.forEach((moduleName) => {
-    let matchingModulePeers = knownPeers.filter((peerInfo) => peerInfo.modules && peerInfo.modules[moduleName]);
+    let matchingModulePeers = knownPeers
+    .filter((peerInfo) => peerInfo.modules && peerInfo.modules[moduleName])
+    .sort((peerInfoA, peerInfoB) => {
+      let peerAScore = getPeerModuleMatchScore(nodeInfo, peerInfoA, moduleName);
+      let peerBScore = getPeerModuleMatchScore(nodeInfo, peerInfoB, moduleName);
+      if (peerAScore > peerBScore) {
+        return -1;
+      }
+      if (peerAScore < peerBScore) {
+        return 1;
+      }
+      return 0;
+    })
+    .slice(0, maxPeersToAllocatePerModule);
     matchingModulePeers.forEach((peerInfo) => {
       let peerId = `${peerInfo.ipAddress}:${peerInfo.wsPort}`;
       if (!chosenPeersLookup[peerId]) {
@@ -72,7 +134,6 @@ function interchainSelectForConnection(input) {
   matchingPeers = shuffle(matchingPeers);
 
   let padPeersCount = selectedPeers.length - matchingPeers.length;
-
   let paddingPeers = [];
 
   // Pad the matchingPeers list with unknown peers to increase the chance of discovery.
@@ -115,14 +176,11 @@ function interchainSelectForRequest(input) {
   }
   let {nodeInfo, peers, peerLimit, requestPacket} = input;
 
-  let {targetModule, requiredModules, sanitizedAction} = parseAction(requestPacket.procedure);
+  let {routeString, sanitizedAction} = parseAction(requestPacket.procedure);
   requestPacket.procedure = sanitizedAction;
 
-  if (targetModule) {
-    let matchingPeers = peers.filter((peerInfo) => {
-      return peerInfo.modules && peerInfo.modules[targetModule] &&
-        requiredModules.every((requiredModule) => peerInfo.modules[requiredModule]);
-    });
+  if (routeString) {
+    let matchingPeers = peers.filter((peerInfo) => doesPeerMatchRoute(peerInfo, routeString));
     if (!matchingPeers.length) {
       return [];
     }
@@ -141,14 +199,11 @@ function interchainSelectForSend(input) {
   }
   let {nodeInfo, peers, peerLimit, messagePacket} = input;
 
-  let {targetModule, requiredModules, sanitizedAction} = parseAction(messagePacket.event);
+  let {routeString, sanitizedAction} = parseAction(messagePacket.event);
   messagePacket.event = sanitizedAction;
 
-  if (targetModule) {
-    let matchingPeers = peers.filter((peerInfo) => {
-      return peerInfo.modules && peerInfo.modules[targetModule] &&
-        requiredModules.every((requiredModule) => peerInfo.modules[requiredModule]);
-    });
+  if (routeString) {
+    let matchingPeers = peers.filter((peerInfo) => doesPeerMatchRoute(peerInfo, routeString));
     if (!matchingPeers.length) {
       return [];
     }
