@@ -77,7 +77,12 @@ function doesPeerMatchRoute(peerInfo, routeString) {
       return false;
     }
     let peerHasAllRequiredModuleFields = Object.keys(query).every(
-      (field) => moduleData[field] === query[field]
+      (field) => {
+        if (typeof moduleData[field] === 'number') {
+          return moduleData[field] === Number(query[field]);
+        }
+        return moduleData[field] === query[field];
+      }
     );
     if (!peerHasAllRequiredModuleFields) {
       return false;
