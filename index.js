@@ -224,25 +224,25 @@ function interchainSelectForSend(input) {
 let interchainState = {};
 
 let interchainChannel = new InMemoryChannel(
-	'interchain',
-	[],
-	{
-		getComponentConfig: {
-			handler: (action) => this.config.components[action.params],
-		},
-		getModuleState: {
-			handler: (action) => interchainState[action.params.moduleName],
-		},
-		updateModuleState: {
-			handler: (action) => {
+  'interchain',
+  [],
+  {
+    getComponentConfig: {
+      handler: (action) => this.config.components[action.params],
+    },
+    getModuleState: {
+      handler: (action) => interchainState[action.params.moduleName],
+    },
+    updateModuleState: {
+      handler: (action) => {
         interchainState = {
           ...interchainState,
           ...action.params
         };
       },
-		},
-	},
-	{ skipInternalEvents: true },
+    },
+  },
+  { skipInternalEvents: true },
 );
 
 function attachInterchain(app) {
